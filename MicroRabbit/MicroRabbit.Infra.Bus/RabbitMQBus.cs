@@ -2,6 +2,7 @@
 using MicroRabbit.Domain.Core.Bus;
 using MicroRabbit.Domain.Core.Commands;
 using MicroRabbit.Domain.Core.Events;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -18,10 +19,12 @@ namespace MicroRabbit.Infra.Bus
 		private readonly IMediator m_oMediator;
 		private readonly Dictionary<string, List<Type>> m_oHandlers;
 		private readonly List<Type> m_oEventTypes;
+		private readonly IServiceScopeFactory m_serviceScopeFactory;
 
-		public RabbitMQBus(IMediator oMediator)
+		public RabbitMQBus(IMediator oMediator, IServiceScopeFactory sericeScopeFactory)
 		{
 			m_oMediator = oMediator;
+			m_serviceScopeFactory = sericeScopeFactory;
 			m_oHandlers = new Dictionary<string, List<Type>>();
 			m_oEventTypes = new List<Type>();
 		}
@@ -123,21 +126,25 @@ namespace MicroRabbit.Infra.Bus
 		{
 			if (m_oHandlers.ContainsKey(sEventName))
 			{
-				var oSubscriptions = m_oHandlers[sEventName];
-
-				foreach (var subscription in oSubscriptions)
+				using (var scope = m_serviceScopeFactory.CreateScope())
 				{
-					var oHandler = Activator.CreateInstance(subscription);
+					var oSubscriptions = m_oHandlers[sEventName];
 
-					if (null == oHandler)
+					foreach (var subscription in oSubscriptions)
 					{
-						continue;
-					}
+						// var oHandler = Activator.CreateInstance(subscription);
+						var oHandler = scope.ServiceProvider.GetService(subscription);
 
-					var oEventType = m_oEventTypes.SingleOrDefault(t => t.Name == sEventName);
-					var @event = JsonConvert.DeserializeObject(sMessage, oEventType);
-					var oConcreteType = typeof(IEventHandler<>).MakeGenericType(oEventType);
-					await (Task)oConcreteType.GetMethod("Handle").Invoke(oHandler, new object[]{ @event });
+						if (null == oHandler)
+						{
+							continue;
+						}
+
+						var oEventType = m_oEventTypes.SingleOrDefault(t => t.Name == sEventName);
+						var @event = JsonConvert.DeserializeObject(sMessage, oEventType);
+						var oConcreteType = typeof(IEventHandler<>).MakeGenericType(oEventType);
+						await (Task)oConcreteType.GetMethod("Handle").Invoke(oHandler, new object[] { @event });
+					}
 				}
 			}
 		}
