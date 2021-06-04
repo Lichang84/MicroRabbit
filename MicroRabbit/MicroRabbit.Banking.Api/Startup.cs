@@ -36,6 +36,7 @@ namespace MicroRabbit.Banking.Api
 				options.UseMySQL(Configuration.GetConnectionString("BankingDbConnection"));
 			});
 			services.AddControllers();
+			//services.AddMvcCore().AddApiExplorer();
 
 			services.AddSwaggerGen(c =>
 			{
@@ -65,7 +66,7 @@ namespace MicroRabbit.Banking.Api
 			app.UseSwagger();
 			app.UseSwaggerUI( c =>
 			{
-				c.SwaggerEndpoint("/swagger/v1/swagger.json", "Banking Microservice V1");
+				c.SwaggerEndpoint("/swagger/V1/swagger.json", "Banking Microservice V1");
 			});
 
 			app.UseRouting();
