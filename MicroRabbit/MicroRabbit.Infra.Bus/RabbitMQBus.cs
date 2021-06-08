@@ -87,7 +87,7 @@ namespace MicroRabbit.Infra.Bus
 		{
 			var oFactory = new ConnectionFactory()
 			{
-				HostName = "",
+				HostName = "localhost",
 				DispatchConsumersAsync = true
 			};
 
